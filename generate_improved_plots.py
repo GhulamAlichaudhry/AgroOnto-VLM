@@ -191,25 +191,20 @@ b1 = ax.bar(x - w/2, ours, w, label='AgroOnto-VLM (Ours)',
 b2 = ax.bar(x + w/2, pubs, w, label='Published Method (Reproduced)',
             color=C_PUB, edgecolor='white', linewidth=1.0, zorder=3)
 for bar, v in zip(b1, ours):
-    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.4,
+    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.5,
             f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
-            fontsize=10, color='#1a5276')
+            fontsize=11, color='#1a5276')
 for idx, (bar, v) in enumerate(zip(b2, pubs)):
-    if abs(ours[idx] - v) < 2.0:
-        offset = 2.8
-        ha_align = 'left'
-    else:
-        offset = 0.4
-        ha_align = 'center'
-    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+offset,
-            f'{v:.1f}%', ha=ha_align, va='bottom', fontweight='bold',
-            fontsize=10, color='#784212')
+    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()/2 + 33,
+            f'{v:.1f}%', ha='center', va='center', fontweight='bold',
+            fontsize=10, color='white', rotation=90)
 deltas = [o - p for o, p in zip(ours, pubs)]
 for i, d in enumerate(deltas):
     sign = '+' if d > 0 else ''
     clr = '#1a9641' if d >= 0 else '#d7191c'
-    ax.text(x[i], min(ours[i], pubs[i]) - 2.5,
-            f'Δ={sign}{d:.1f}%', ha='center', fontsize=9,
+    lower_bar = min(ours[i], pubs[i])
+    ax.text(x[i], lower_bar - 1.0,
+            f'Δ={sign}{d:.1f}%', ha='center', va='top', fontsize=9,
             fontweight='bold', color=clr)
 ax.set_xticks(x)
 ax.set_xticklabels(labels, fontsize=10)
@@ -217,7 +212,7 @@ ax.set_ylabel('Top-1 Accuracy (%)')
 ax.set_title('AgroOnto-VLM vs. Published SOTA Methods', fontweight='bold', pad=12)
 ax.legend(loc='upper left', fontsize=11, framealpha=0.9)
 all_v = ours + pubs
-ax.set_ylim(min(all_v) - 8, max(all_v) + 4)
+ax.set_ylim(min(all_v) - 8, max(all_v) + 5)
 ax.yaxis.grid(True, alpha=0.25, linestyle='--', zorder=0)
 ax.set_axisbelow(True)
 ax.spines['top'].set_visible(False)
