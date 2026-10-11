@@ -659,7 +659,160 @@ def run_tsne_visualization(datasets=None):
 
 
 # ===================================================================
-#  8. Published Methods Comparison Bar Chart
+#  8. Grad-CAM Visualization Grid
+# ===================================================================
+def run_gradcam(datasets=None):
+    """Generate Grad-CAM attention heatmap grids for each dataset."""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+    except ImportError:
+        print("  Install matplotlib: pip install matplotlib")
+        return
+
+    if datasets is None:
+        datasets = ["PlantVillageTomato", "DeepWeeds", "IP102"]
+
+    print(f"\n{'='*70}")
+    print(f"  Grad-CAM Visualization Grid")
+    print(f"{'='*70}")
+
+    preprocess = get_clip_preprocess()
+
+    for ds in datasets:
+        print(f"\n  Dataset: {ds}")
+        set_seed(42)
+        train_loader, val_loader, class_names, num_classes = build_loaders(ds, preprocess)
+
+        onto_sim = compute_similarity_matrix(ds, class_names, num_classes).to(DEVICE)
+        model = AgroOntoVLM(num_classes, class_names, device=DEVICE).to(DEVICE)
+
+        optimizer = torch.optim.AdamW(
+            model.get_param_groups(config.LR_LORA, config.LR_HEAD,
+                                   config.LR_DELTA, config.LR_LOGIT_SCALE),
+            weight_decay=config.WEIGHT_DECAY)
+        scaler = GradScaler()
+
+        lambda_onto = 0.05
+        lambda_ce = 1.0 - config.LAMBDA_UNIFORM - lambda_onto
+
+        print(f"  Training {config.EPOCHS} epochs...")
+        for epoch in range(1, config.EPOCHS + 1):
+            train_one_epoch(model, train_loader, optimizer, scaler, onto_sim,
+                           num_classes, lambda_ce, config.LAMBDA_UNIFORM, lambda_onto,
+                           config.LAMBDA_PROTO, DEVICE)
+
+        model.eval()
+
+        target_layer = model.clip.visual.transformer.resblocks[-1].ln_1
+        activations = {}
+        gradients = {}
+
+        def save_activation(name):
+            def hook(module, input, output):
+                activations[name] = output.detach()
+            return hook
+
+        def save_gradient(name):
+            def hook(module, input, output):
+                if output.requires_grad:
+                    output.register_hook(lambda grad: gradients.update({name: grad.detach()}))
+            return hook
+
+        handle_fwd = target_layer.register_forward_hook(save_activation("target"))
+        handle_bwd = target_layer.register_forward_hook(save_gradient("target"))
+
+        num_samples = min(4, len(val_loader.dataset))
+        sample_indices = random.sample(range(len(val_loader.dataset)), num_samples)
+
+        fig, axes = plt.subplots(num_samples, 2, figsize=(8, 4 * num_samples))
+        if num_samples == 1:
+            axes = axes.reshape(1, -1)
+
+        denorm_mean = torch.tensor([0.48145466, 0.4578275, 0.40821073]).view(3, 1, 1)
+        denorm_std = torch.tensor([0.26862954, 0.26130258, 0.27577711]).view(3, 1, 1)
+
+        for idx, sample_idx in enumerate(sample_indices):
+            img_tensor, label = val_loader.dataset[sample_idx]
+            img_input = img_tensor.unsqueeze(0).to(DEVICE).requires_grad_(True)
+
+            activations.clear()
+            gradients.clear()
+
+            logits_cls, _, _ = model(img_input)
+            pred_class = logits_cls.argmax(dim=-1).item()
+            score = logits_cls[0, pred_class]
+            model.zero_grad()
+            score.backward()
+
+            if "target" in activations and "target" in gradients:
+                act = activations["target"]
+                grad = gradients["target"]
+
+                if act.dim() == 3:
+                    act = act[1:, 0, :]
+                    grad = grad[1:, 0, :]
+
+                weights = grad.mean(dim=0)
+                cam = (act * weights).sum(dim=-1)
+                cam = torch.relu(cam)
+
+                side = int(cam.shape[0] ** 0.5)
+                if side * side == cam.shape[0]:
+                    cam = cam.reshape(side, side)
+                else:
+                    side = int(np.ceil(cam.shape[0] ** 0.5))
+                    cam_padded = torch.zeros(side * side, device=cam.device)
+                    cam_padded[:cam.shape[0]] = cam
+                    cam = cam_padded.reshape(side, side)
+
+                cam = cam.cpu().numpy()
+                cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
+
+                import cv2
+                cam_resized = cv2.resize(cam, (224, 224))
+            else:
+                cam_resized = np.zeros((224, 224))
+
+            img_show = img_tensor.cpu() * denorm_std + denorm_mean
+            img_show = img_show.clamp(0, 1).permute(1, 2, 0).numpy()
+
+            import cv2
+            img_resized = cv2.resize(img_show, (224, 224))
+
+            heatmap = cm.jet(cam_resized)[:, :, :3]
+            overlay = 0.5 * img_resized + 0.5 * heatmap
+
+            short_name = class_names[label].replace("Tomato___", "").replace("_", " ")[:25]
+            pred_name = class_names[pred_class].replace("Tomato___", "").replace("_", " ")[:25]
+
+            axes[idx, 0].imshow(img_resized)
+            axes[idx, 0].set_title(f"Original: {short_name}", fontsize=9)
+            axes[idx, 0].axis('off')
+
+            axes[idx, 1].imshow(overlay)
+            axes[idx, 1].set_title(f"Grad-CAM: {pred_name}", fontsize=9)
+            axes[idx, 1].axis('off')
+
+        handle_fwd.remove()
+        handle_bwd.remove()
+
+        plt.suptitle(f'Grad-CAM Attention Maps — AgroOnto-VLM on {ds}',
+                    fontsize=14, fontweight='bold')
+        plt.tight_layout()
+
+        out_path = os.path.join(RESULTS_DIR, f"gradcam_grid_{ds}.png")
+        plt.savefig(out_path, dpi=150)
+        plt.close()
+        print(f"  Saved: {out_path}")
+
+        clear_gpu()
+
+
+# ===================================================================
+#  9. Published Methods Comparison Bar Chart
 # ===================================================================
 def run_comparison_barchart():
     """Bar chart: AgroOnto-VLM vs all published methods."""
@@ -922,7 +1075,7 @@ def main():
     parser.add_argument("--analysis", type=str, default=None,
                         choices=["metrics", "confusion", "severity",
                                  "multiseed", "heatmap", "curves", "tsne",
-                                 "barchart", "ablation", "efficiency"],
+                                 "gradcam", "barchart", "ablation", "efficiency"],
                         help="Run only this analysis")
     args = parser.parse_args()
 
@@ -943,6 +1096,7 @@ def main():
         "heatmap":    ("Ontology Heatmap",               run_ontology_heatmap),
         "curves":     ("Training Curves",                run_training_curves),
         "tsne":       ("t-SNE Visualization",            run_tsne_visualization),
+        "gradcam":    ("Grad-CAM Attention Grid",        run_gradcam),
         "barchart":   ("Published Comparison Bar Chart", run_comparison_barchart),
         "ablation":   ("Ablation Study Bar Chart",       run_ablation_barchart),
         "efficiency": ("Parameter Efficiency Plot",      run_param_efficiency),
