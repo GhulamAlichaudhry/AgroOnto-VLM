@@ -315,7 +315,7 @@ print(f"  Saved: {p}")
 # ═══════════════════════════════════════════════════════════
 #  Fix Grad-CAM Grid Spacing (if originals exist)
 # ═══════════════════════════════════════════════════════════
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 for ds in ["PlantVillageTomato", "DeepWeeds", "IP102"]:
     src = os.path.join(OUT, f"gradcam_grid_{ds}.png")
@@ -325,9 +325,29 @@ for ds in ["PlantVillageTomato", "DeepWeeds", "IP102"]:
     img = Image.open(src)
     w, h = img.size
 
-    canvas_h = h + 80
-    canvas = Image.new('RGB', (w, canvas_h), (255, 255, 255))
-    canvas.paste(img, (0, 80))
+    title_crop = int(h * 0.045)
+    cropped = img.crop((0, title_crop, w, h))
+    cw, ch = cropped.size
+
+    title_h = 120
+    canvas = Image.new('RGB', (cw, ch + title_h), (255, 255, 255))
+    canvas.paste(cropped, (0, title_h))
+
+    draw = ImageDraw.Draw(canvas)
+    title_text = f"Grad-CAM Attention Maps \u2014 AgroOnto-VLM on {ds}"
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 42)
+    except (OSError, IOError):
+        try:
+            font = ImageFont.truetype("C:/Windows/Fonts/times.ttf", 42)
+        except (OSError, IOError):
+            font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), title_text, font=font)
+    tw = bbox[2] - bbox[0]
+    tx = (cw - tw) // 2
+    ty = 35
+    draw.text((tx, ty), title_text, fill=(0, 0, 0), font=font)
 
     dst = os.path.join(OUT, f"gradcam_grid_{ds}_improved.png")
     canvas.save(dst, dpi=(300, 300))
