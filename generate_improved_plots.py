@@ -277,7 +277,7 @@ for idx, (ds_title, groups) in enumerate(severity.items()):
     if idx == 0:
         ax.set_ylabel('Top-1 Accuracy (%)')
     ax.set_title(f'({chr(97+idx)}) {ds_title}', fontsize=13, fontweight='bold')
-    ax.set_ylim(max(0, min(vals)-12), 106)
+    ax.set_ylim(max(0, min(vals)-12), 101)
     ax.yaxis.grid(True, alpha=0.25, linestyle='--', zorder=0)
     ax.set_axisbelow(True)
     ax.spines['top'].set_visible(False)
