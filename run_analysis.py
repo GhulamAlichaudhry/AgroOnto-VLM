@@ -233,24 +233,46 @@ def run_confusion_matrix(datasets=None):
         for p, l in zip(preds, labels):
             cm[l][p] += 1
 
-        fig_size = max(8, num_classes * 0.4)
-        fig, ax = plt.subplots(figsize=(fig_size, fig_size))
+        cm_path = os.path.join(RESULTS_DIR, f"confusion_matrix_{ds}.npy")
+        np.save(cm_path, cm)
+        cn_path = os.path.join(RESULTS_DIR, f"class_names_{ds}.json")
+        import json as _json
+        with open(cn_path, 'w') as _f:
+            _json.dump(class_names, _f)
+
+        clean_names = [n.replace("Tomato___", "").replace("_", " ") for n in class_names]
+
+        plt.rcParams.update({'font.family': 'serif',
+                             'font.serif': ['Times New Roman', 'DejaVu Serif', 'serif']})
 
         if num_classes <= 20:
+            fig_size = max(8, num_classes * 0.55)
+            fig, ax = plt.subplots(figsize=(fig_size, fig_size))
             sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                       xticklabels=class_names, yticklabels=class_names, ax=ax)
-            plt.xticks(rotation=45, ha='right', fontsize=8)
-            plt.yticks(fontsize=8)
+                       xticklabels=clean_names, yticklabels=clean_names, ax=ax,
+                       linewidths=0.5, linecolor='white',
+                       cbar_kws={'shrink': 0.8})
+            plt.xticks(rotation=45, ha='right', fontsize=9)
+            plt.yticks(rotation=0, fontsize=9)
         else:
-            sns.heatmap(cm, cmap='Blues', ax=ax)
-            ax.set_xlabel("Predicted")
-            ax.set_ylabel("True")
+            cm_norm = cm.astype(float) / (cm.sum(axis=1, keepdims=True) + 1e-8) * 100
+            fig, ax = plt.subplots(figsize=(14, 12))
+            sns.heatmap(cm_norm, cmap='Blues', ax=ax, vmin=0, vmax=100,
+                       cbar_kws={'shrink': 0.7, 'label': 'Accuracy (%)'})
+            ax.set_xlabel("Predicted Class Index", fontsize=12)
+            ax.set_ylabel("True Class Index", fontsize=12)
+            tick_step = 10
+            ticks = list(range(0, num_classes, tick_step))
+            ax.set_xticks([t + 0.5 for t in ticks])
+            ax.set_xticklabels(ticks, fontsize=8)
+            ax.set_yticks([t + 0.5 for t in ticks])
+            ax.set_yticklabels(ticks, fontsize=8)
 
-        ax.set_title(f'Confusion Matrix — AgroOnto-VLM on {ds}')
+        ax.set_title(f'Confusion Matrix — AgroOnto-VLM on {ds}', fontsize=14, pad=15)
         plt.tight_layout()
 
         out_path = os.path.join(RESULTS_DIR, f"confusion_matrix_{ds}.png")
-        plt.savefig(out_path, dpi=150)
+        plt.savefig(out_path, dpi=300, bbox_inches='tight')
         plt.close()
         print(f"  Saved: {out_path}")
 
@@ -802,11 +824,12 @@ def run_gradcam(datasets=None):
         handle_bwd.remove()
 
         plt.suptitle(f'Grad-CAM Attention Maps — AgroOnto-VLM on {ds}',
-                    fontsize=14, fontweight='bold')
-        plt.tight_layout()
+                    fontsize=14, fontweight='bold', y=1.02)
+        plt.tight_layout(rect=[0, 0, 1, 0.97])
+        plt.subplots_adjust(hspace=0.35)
 
         out_path = os.path.join(RESULTS_DIR, f"gradcam_grid_{ds}.png")
-        plt.savefig(out_path, dpi=150)
+        plt.savefig(out_path, dpi=300, bbox_inches='tight')
         plt.close()
         print(f"  Saved: {out_path}")
 
