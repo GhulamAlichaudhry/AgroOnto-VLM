@@ -185,20 +185,20 @@ labels = [s[0] for s in sota]
 ours   = [s[1] for s in sota]
 pubs   = [s[2] for s in sota]
 x = np.arange(len(labels))
-w = 0.30
-b1 = ax.bar(x - w/2 - 0.02, ours, w, label='AgroOnto-VLM (Ours)',
+w = 0.28
+gap = 0.06
+b1 = ax.bar(x - w/2 - gap/2, ours, w, label='AgroOnto-VLM (Ours)',
             color=C_OURS, edgecolor='white', linewidth=1.0, zorder=3)
-b2 = ax.bar(x + w/2 + 0.02, pubs, w, label='Published Method (Reproduced)',
+b2 = ax.bar(x + w/2 + gap/2, pubs, w, label='Published Method (Reproduced)',
             color=C_PUB, edgecolor='white', linewidth=1.0, zorder=3)
 for bar, v in zip(b1, ours):
-    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.3,
+    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.4,
             f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
-            fontsize=9.5, color='#1a5276')
-for idx, (bar, v) in enumerate(zip(b2, pubs)):
-    top = max(ours[idx], v)
-    ax.text(bar.get_x()+bar.get_width()/2, top + 1.8,
+            fontsize=9, color='#1a5276')
+for bar, v in zip(b2, pubs):
+    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.4,
             f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
-            fontsize=9.5, color='#784212')
+            fontsize=9, color='#784212')
 deltas = [o - p for o, p in zip(ours, pubs)]
 for i, d in enumerate(deltas):
     sign = '+' if d > 0 else ''
@@ -213,7 +213,7 @@ ax.set_ylabel('Top-1 Accuracy (%)')
 ax.set_title('AgroOnto-VLM vs. Published SOTA Methods', fontweight='bold', pad=20)
 ax.legend(loc='upper left', fontsize=10, framealpha=0.9)
 all_v = ours + pubs
-ax.set_ylim(min(all_v) - 8, max(all_v) + 7)
+ax.set_ylim(min(all_v) - 8, max(all_v) + 6)
 ax.yaxis.grid(True, alpha=0.25, linestyle='--', zorder=0)
 ax.set_axisbelow(True)
 ax.spines['top'].set_visible(False)
