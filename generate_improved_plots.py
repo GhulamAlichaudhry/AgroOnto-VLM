@@ -191,12 +191,13 @@ b1 = ax.bar(x - w/2 - gap/2, ours, w, label='AgroOnto-VLM (Ours)',
             color=C_OURS, edgecolor='white', linewidth=1.0, zorder=3)
 b2 = ax.bar(x + w/2 + gap/2, pubs, w, label='Published Method (Reproduced)',
             color=C_PUB, edgecolor='white', linewidth=1.0, zorder=3)
+txt_offset = 0.8
 for bar, v in zip(b1, ours):
-    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.4,
+    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+txt_offset,
             f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
             fontsize=9, color='#1a5276')
 for bar, v in zip(b2, pubs):
-    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.4,
+    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+txt_offset,
             f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
             fontsize=9, color='#784212')
 deltas = [o - p for o, p in zip(ours, pubs)]
