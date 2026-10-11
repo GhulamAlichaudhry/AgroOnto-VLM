@@ -39,7 +39,7 @@ from torchvision import transforms
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from agroonto import config
 from agroonto.model import AgroOntoVLM
-from agroonto.train import train_one_epoch, evaluate, ontology_label_smoothing
+from agroonto.train import train_one_epoch, evaluate
 from agroonto.dataset import build_loaders, get_clip_preprocess
 from agroonto.ontology import compute_similarity_matrix
 
