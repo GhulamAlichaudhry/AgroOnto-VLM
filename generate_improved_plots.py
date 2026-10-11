@@ -115,8 +115,9 @@ for ds_key, ds_title in TITLES.items():
 
     fig, ax = plt.subplots(figsize=(8, 5.5))
     x = np.arange(4)
-    bars = ax.bar(x, accs, width=0.58, color=COLORS_4,
-                  edgecolor='white', linewidth=1.2, zorder=3)
+    bars = ax.bar(x, accs, width=0.55, color=COLORS_4,
+                  edgecolor=['#137a2d','#1e6590','#c88a3e','#a8122e'],
+                  linewidth=1.2, zorder=3)
 
     for bar, acc in zip(bars, accs):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.4,
@@ -143,32 +144,34 @@ for ds_key, ds_title in TITLES.items():
 # 2. ABLATION — combined (all 3 datasets, one figure)
 # ════════════════════════════════════════════════════════
 print("\n[2/12] Ablation combined figure...")
-fig, axes = plt.subplots(1, 3, figsize=(17, 5.5))
+fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 for idx, (ds_key, ds_title) in enumerate(TITLES.items()):
     ax = axes[idx]
     vals = ablation[ds_key]
     accs = [vals["M1"], vals["M2"], vals["M3"], vals["M4"]]
     x = np.arange(4)
-    bars = ax.bar(x, accs, width=0.58, color=COLORS_4,
-                  edgecolor='white', linewidth=1.0, zorder=3)
+    bars = ax.bar(x, accs, width=0.55, color=COLORS_4,
+                  edgecolor=['#137a2d','#1e6590','#c88a3e','#a8122e'],
+                  linewidth=1.2, zorder=3)
     for bar, acc in zip(bars, accs):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
                 f'{acc:.1f}%', ha='center', va='bottom',
-                fontweight='bold', fontsize=10)
+                fontweight='bold', fontsize=11)
     ax.set_xticks(x)
-    ax.set_xticklabels(SHORT_LABELS, fontsize=9, linespacing=1.1)
+    ax.set_xticklabels(SHORT_LABELS, fontsize=10, linespacing=1.15)
     if idx == 0:
-        ax.set_ylabel('Top-1 Accuracy (%)')
-    ax.set_title(f'({chr(97+idx)}) {ds_title}', fontsize=13, fontweight='bold')
+        ax.set_ylabel('Top-1 Accuracy (%)', fontsize=12)
+    ax.set_title(f'({chr(97+idx)}) {ds_title}', fontsize=14, fontweight='bold')
     lo = min(accs)
     ax.set_ylim(max(0, lo - 10), min(100.8, max(accs) + 3.5))
-    ax.yaxis.grid(True, alpha=0.25, linestyle='--', zorder=0)
+    ax.yaxis.set_major_locator(mticker.MaxNLocator(integer=True, nbins=8))
+    ax.yaxis.grid(True, alpha=0.3, linestyle='--', zorder=0)
     ax.set_axisbelow(True)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
 fig.suptitle('Ablation Study — Component Contribution Analysis',
-             fontsize=15, fontweight='bold', y=1.01)
+             fontsize=16, fontweight='bold', y=1.02)
 plt.tight_layout()
 _save(fig, "ablation_combined_improved.png")
 
