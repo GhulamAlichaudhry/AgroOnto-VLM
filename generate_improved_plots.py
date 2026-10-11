@@ -194,9 +194,15 @@ for bar, v in zip(b1, ours):
     ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.4,
             f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
             fontsize=10, color='#1a5276')
-for bar, v in zip(b2, pubs):
-    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+0.4,
-            f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
+for idx, (bar, v) in enumerate(zip(b2, pubs)):
+    if abs(ours[idx] - v) < 2.0:
+        offset = 2.8
+        ha_align = 'left'
+    else:
+        offset = 0.4
+        ha_align = 'center'
+    ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+offset,
+            f'{v:.1f}%', ha=ha_align, va='bottom', fontweight='bold',
             fontsize=10, color='#784212')
 deltas = [o - p for o, p in zip(ours, pubs)]
 for i, d in enumerate(deltas):
