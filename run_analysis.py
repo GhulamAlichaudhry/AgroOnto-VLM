@@ -659,6 +659,261 @@ def run_tsne_visualization(datasets=None):
 
 
 # ===================================================================
+#  8. Published Methods Comparison Bar Chart
+# ===================================================================
+def run_comparison_barchart():
+    """Bar chart: AgroOnto-VLM vs all published methods."""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("  Install matplotlib: pip install matplotlib")
+        return
+
+    print(f"\n{'='*70}")
+    print(f"  Published Methods Comparison Bar Chart")
+    print(f"{'='*70}")
+
+    pub_dir = os.path.join(config.BASE_DIR, "results", "published_methods")
+    summary_path = os.path.join(pub_dir, "comparison_summary.json")
+    if not os.path.exists(summary_path):
+        print("  No published results found. Run published methods first.")
+        return
+
+    with open(summary_path) as f:
+        data = json.load(f)
+
+    our = data.get("our_results", {})
+    published = data.get("published_repro", {})
+
+    methods = []
+    ours_acc = []
+    repro_acc = []
+
+    labels_map = {
+        "P1": ("DINOv2+LoRA\n(DeepWeeds)", "DeepWeeds"),
+        "P2": ("Swin-AARNet\n(IP102)", "IP102"),
+        "P3": ("FFM+MAM\n(IP102)", "IP102"),
+        "P4": ("CT-PestNet\n(IP102)", "IP102"),
+        "P5": ("CNN-Stacking\n(PV-Tomato)", "PlantVillageTomato"),
+    }
+
+    for pid, (label, ds) in labels_map.items():
+        if pid in published:
+            methods.append(label)
+            our_val = our.get(ds, our.get("PlantVillage", 0))
+            ours_acc.append(our_val)
+            repro_acc.append(published[pid].get("acc", 0))
+
+    if not methods:
+        print("  No completed methods to plot.")
+        return
+
+    x = np.arange(len(methods))
+    width = 0.35
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    bars1 = ax.bar(x - width/2, ours_acc, width, label='AgroOnto-VLM (Ours)',
+                   color='#2196F3', edgecolor='white')
+    bars2 = ax.bar(x + width/2, repro_acc, width, label='Published Method (Repro)',
+                   color='#FF9800', edgecolor='white')
+
+    ax.set_ylabel('Accuracy (%)', fontsize=12)
+    ax.set_title('AgroOnto-VLM vs Published SOTA Methods', fontsize=14, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(methods, fontsize=9)
+    ax.legend(fontsize=11)
+    ax.set_ylim(bottom=max(0, min(ours_acc + repro_acc) - 10))
+    ax.grid(axis='y', alpha=0.3)
+
+    for bar in bars1:
+        ax.annotate(f'{bar.get_height():.1f}%',
+                   xy=(bar.get_x() + bar.get_width()/2, bar.get_height()),
+                   xytext=(0, 3), textcoords="offset points",
+                   ha='center', va='bottom', fontsize=9)
+    for bar in bars2:
+        ax.annotate(f'{bar.get_height():.1f}%',
+                   xy=(bar.get_x() + bar.get_width()/2, bar.get_height()),
+                   xytext=(0, 3), textcoords="offset points",
+                   ha='center', va='bottom', fontsize=9)
+
+    plt.tight_layout()
+    out_path = os.path.join(RESULTS_DIR, "comparison_barchart.png")
+    plt.savefig(out_path, dpi=150)
+    plt.close()
+    print(f"  Saved: {out_path}")
+
+
+# ===================================================================
+#  9. Ablation Study Bar Chart (M1-M7)
+# ===================================================================
+def run_ablation_barchart():
+    """Bar chart for M1-M7 ablation results per dataset."""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("  Install matplotlib: pip install matplotlib")
+        return
+
+    print(f"\n{'='*70}")
+    print(f"  Ablation Study Bar Chart (M1-M7)")
+    print(f"{'='*70}")
+
+    summary_path = os.path.join(config.BASE_DIR, "results", "all_methods",
+                                 "all_methods_summary.json")
+    if not os.path.exists(summary_path):
+        print("  No results found. Run all_methods first.")
+        return
+
+    with open(summary_path) as f:
+        data = json.load(f)
+
+    for dataset in ["PlantVillage", "DeepWeeds", "IP102"]:
+        entries = [e for e in data if e.get("dataset") == dataset
+                   and e.get("method") != "CLIP Zero-Shot"]
+
+        if not entries:
+            continue
+
+        methods = [e["method"].replace(" (Proposed)", "\n(Proposed)")
+                   .replace(" Ablation", "\nAblation")
+                   .replace(" Linear Probe", "\nLinear Probe")
+                   .replace(" Baseline", "\nBaseline")
+                   for e in entries]
+        accs = [e.get("best_val_acc", 0) for e in entries]
+
+        colors = ['#4CAF50' if '(Proposed)' in m else '#2196F3' if 'Baseline' in m
+                  else '#FF9800' if 'Ablation' in m else '#9E9E9E'
+                  for m in methods]
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        bars = ax.bar(range(len(methods)), accs, color=colors, edgecolor='white')
+
+        ax.set_ylabel('Accuracy (%)', fontsize=12)
+        ax.set_title(f'Ablation Study — {dataset}', fontsize=14, fontweight='bold')
+        ax.set_xticks(range(len(methods)))
+        ax.set_xticklabels(methods, fontsize=8, ha='center')
+        ax.set_ylim(bottom=max(0, min(accs) - 10))
+        ax.grid(axis='y', alpha=0.3)
+
+        for bar in bars:
+            ax.annotate(f'{bar.get_height():.1f}%',
+                       xy=(bar.get_x() + bar.get_width()/2, bar.get_height()),
+                       xytext=(0, 3), textcoords="offset points",
+                       ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+        plt.tight_layout()
+        out_path = os.path.join(RESULTS_DIR, f"ablation_barchart_{dataset}.png")
+        plt.savefig(out_path, dpi=150)
+        plt.close()
+        print(f"  Saved: {out_path}")
+
+
+# ===================================================================
+#  10. Parameter Efficiency Plot (Accuracy vs Params)
+# ===================================================================
+def run_param_efficiency():
+    """Scatter plot: accuracy vs trainable parameters for all methods."""
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("  Install matplotlib: pip install matplotlib")
+        return
+
+    print(f"\n{'='*70}")
+    print(f"  Parameter Efficiency Plot")
+    print(f"{'='*70}")
+
+    summary_path = os.path.join(config.BASE_DIR, "results", "all_methods",
+                                 "all_methods_summary.json")
+    pub_dir = os.path.join(config.BASE_DIR, "results", "published_methods")
+
+    points = []
+
+    if os.path.exists(summary_path):
+        with open(summary_path) as f:
+            data = json.load(f)
+        for e in data:
+            if e.get("trainable_params", 0) > 0:
+                points.append({
+                    "method": e["method"].replace(" (Proposed)", "*"),
+                    "dataset": e["dataset"],
+                    "acc": e.get("best_val_acc", 0),
+                    "params": e["trainable_params"],
+                    "group": "ours" if "Proposed" in e.get("method", "") else "ablation",
+                })
+
+    for pid in ["P1", "P2", "P3", "P4", "P5"]:
+        ds_map = {"P1": "DeepWeeds", "P2": "IP102", "P3": "IP102",
+                  "P4": "IP102", "P5": "PlantVillageTomato"}
+        name_map = {"P1": "DINOv2+LoRA", "P2": "Swin-AARNet", "P3": "FFM+MAM",
+                    "P4": "CT-PestNet", "P5": "CNN-Stacking"}
+        fpath = os.path.join(pub_dir, f"{pid}_{ds_map[pid]}.json")
+        if os.path.exists(fpath):
+            with open(fpath) as f:
+                pdata = json.load(f)
+            points.append({
+                "method": name_map[pid],
+                "dataset": ds_map[pid],
+                "acc": pdata.get("best_val_acc", 0),
+                "params": pdata.get("trainable_params", 0),
+                "group": "published",
+            })
+
+    if not points:
+        print("  No data to plot.")
+        return
+
+    for dataset in ["PlantVillage", "DeepWeeds", "IP102"]:
+        ds_points = [p for p in points if p["dataset"] == dataset]
+        if len(ds_points) < 2:
+            continue
+
+        fig, ax = plt.subplots(figsize=(10, 7))
+
+        for p in ds_points:
+            color = '#4CAF50' if p["group"] == "ours" else \
+                    '#F44336' if p["group"] == "published" else '#2196F3'
+            marker = '*' if p["group"] == "ours" else \
+                     'D' if p["group"] == "published" else 'o'
+            size = 200 if p["group"] == "ours" else 120
+
+            ax.scatter(p["params"], p["acc"], c=color, marker=marker,
+                      s=size, zorder=5, edgecolors='white', linewidth=1)
+            ax.annotate(p["method"], (p["params"], p["acc"]),
+                       xytext=(8, 5), textcoords="offset points",
+                       fontsize=8, ha='left')
+
+        ax.set_xlabel('Trainable Parameters', fontsize=12)
+        ax.set_ylabel('Accuracy (%)', fontsize=12)
+        ax.set_title(f'Parameter Efficiency — {dataset}', fontsize=14, fontweight='bold')
+        ax.set_xscale('log')
+        ax.grid(True, alpha=0.3)
+
+        from matplotlib.lines import Line2D
+        legend_elements = [
+            Line2D([0], [0], marker='*', color='w', markerfacecolor='#4CAF50',
+                   markersize=15, label='AgroOnto-VLM (Ours)'),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='#2196F3',
+                   markersize=10, label='Ablation'),
+            Line2D([0], [0], marker='D', color='w', markerfacecolor='#F44336',
+                   markersize=10, label='Published'),
+        ]
+        ax.legend(handles=legend_elements, fontsize=10)
+
+        plt.tight_layout()
+        out_path = os.path.join(RESULTS_DIR, f"param_efficiency_{dataset}.png")
+        plt.savefig(out_path, dpi=150)
+        plt.close()
+        print(f"  Saved: {out_path}")
+
+
+# ===================================================================
 #  Main
 # ===================================================================
 def main():
@@ -666,7 +921,8 @@ def main():
         description="AgroOnto-VLM: Post-Training Analysis & Severity Study")
     parser.add_argument("--analysis", type=str, default=None,
                         choices=["metrics", "confusion", "severity",
-                                 "multiseed", "heatmap", "curves", "tsne"],
+                                 "multiseed", "heatmap", "curves", "tsne",
+                                 "barchart", "ablation", "efficiency"],
                         help="Run only this analysis")
     args = parser.parse_args()
 
@@ -675,18 +931,21 @@ def main():
     print(f"  Device: {DEVICE}")
     if DEVICE == "cuda":
         props = torch.cuda.get_device_properties(0)
-        print(f"  GPU: {props.name}  |  VRAM: {props.total_mem / 1024**3:.1f} GB")
+        print(f"  GPU: {props.name}  |  VRAM: {props.total_memory / 1024**3:.1f} GB")
     print(f"  Results: {RESULTS_DIR}")
     print("=" * 70)
 
     ANALYSIS_MAP = {
-        "metrics":   ("Per-Class Metrics",        run_metrics_analysis),
-        "confusion": ("Confusion Matrices",       run_confusion_matrix),
-        "severity":  ("Severity Analysis",        run_severity_analysis),
-        "multiseed": ("Multi-Seed Evaluation",    run_multiseed_evaluation),
-        "heatmap":   ("Ontology Heatmap",         run_ontology_heatmap),
-        "curves":    ("Training Curves",          run_training_curves),
-        "tsne":      ("t-SNE Visualization",      run_tsne_visualization),
+        "metrics":    ("Per-Class Metrics",              run_metrics_analysis),
+        "confusion":  ("Confusion Matrices",             run_confusion_matrix),
+        "severity":   ("Severity Analysis",              run_severity_analysis),
+        "multiseed":  ("Multi-Seed Evaluation",          run_multiseed_evaluation),
+        "heatmap":    ("Ontology Heatmap",               run_ontology_heatmap),
+        "curves":     ("Training Curves",                run_training_curves),
+        "tsne":       ("t-SNE Visualization",            run_tsne_visualization),
+        "barchart":   ("Published Comparison Bar Chart", run_comparison_barchart),
+        "ablation":   ("Ablation Study Bar Chart",       run_ablation_barchart),
+        "efficiency": ("Parameter Efficiency Plot",      run_param_efficiency),
     }
 
     if args.analysis:
