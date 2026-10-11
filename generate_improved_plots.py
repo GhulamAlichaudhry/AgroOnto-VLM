@@ -191,7 +191,7 @@ b1 = ax.bar(x - w/2 - gap/2, ours, w, label='AgroOnto-VLM (Ours)',
             color=C_OURS, edgecolor='white', linewidth=1.0, zorder=3)
 b2 = ax.bar(x + w/2 + gap/2, pubs, w, label='Published Method (Reproduced)',
             color=C_PUB, edgecolor='white', linewidth=1.0, zorder=3)
-txt_offset = 0.5
+txt_offset = 0.3
 for bar, v in zip(b1, ours):
     ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+txt_offset,
             f'{v:.1f}%', ha='center', va='bottom', fontweight='bold',
