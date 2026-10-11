@@ -533,7 +533,9 @@ def run_training_curves():
     with open(summary_path) as f:
         data = json.load(f)
 
-    proposed = [e for e in data if e.get("method") == "AgroOnto-VLM (Proposed)"]
+    excluded_methods = {"CLIP Zero-Shot", "ResNet-50 Linear Probe", "ViT-B/16 Linear Probe"}
+    proposed = [e for e in data if e.get("method") == "AgroOnto-VLM (Proposed)"
+                and e.get("method") not in excluded_methods]
 
     for entry in proposed:
         ds = entry["dataset"]
@@ -899,10 +901,10 @@ def run_comparison_barchart():
 
 
 # ===================================================================
-#  9. Ablation Study Bar Chart (M1-M7)
+#  9. Ablation Study Bar Chart (M1-M4)
 # ===================================================================
 def run_ablation_barchart():
-    """Bar chart for M1-M7 ablation results per dataset."""
+    """Bar chart for M1-M4 ablation results per dataset."""
     try:
         import matplotlib
         matplotlib.use('Agg')
@@ -912,7 +914,7 @@ def run_ablation_barchart():
         return
 
     print(f"\n{'='*70}")
-    print(f"  Ablation Study Bar Chart (M1-M7)")
+    print(f"  Ablation Study Bar Chart (M1-M4)")
     print(f"{'='*70}")
 
     summary_path = os.path.join(config.BASE_DIR, "results", "all_methods",
@@ -924,9 +926,11 @@ def run_ablation_barchart():
     with open(summary_path) as f:
         data = json.load(f)
 
+    excluded_methods = {"CLIP Zero-Shot", "ResNet-50 Linear Probe", "ViT-B/16 Linear Probe"}
+
     for dataset in ["PlantVillage", "DeepWeeds", "IP102"]:
         entries = [e for e in data if e.get("dataset") == dataset
-                   and e.get("method") != "CLIP Zero-Shot"]
+                   and e.get("method") not in excluded_methods]
 
         if not entries:
             continue
@@ -988,11 +992,13 @@ def run_param_efficiency():
 
     points = []
 
+    excluded_methods = {"CLIP Zero-Shot", "ResNet-50 Linear Probe", "ViT-B/16 Linear Probe"}
+
     if os.path.exists(summary_path):
         with open(summary_path) as f:
             data = json.load(f)
         for e in data:
-            if e.get("trainable_params", 0) > 0:
+            if e.get("trainable_params", 0) > 0 and e.get("method") not in excluded_methods:
                 points.append({
                     "method": e["method"].replace(" (Proposed)", "*"),
                     "dataset": e["dataset"],
