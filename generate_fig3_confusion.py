@@ -78,8 +78,6 @@ for i in range(K):
         if lo > 0:
             ip_cm[i, nearby[0]] += lo
 
-pv_norm = pv_cm.astype(float) / (pv_cm.sum(axis=1, keepdims=True) + 1e-8) * 100
-dw_norm = dw_cm.astype(float) / (dw_cm.sum(axis=1, keepdims=True) + 1e-8) * 100
 ip_norm = ip_cm.astype(float) / (ip_cm.sum(axis=1, keepdims=True) + 1e-8) * 100
 
 # ═══════════════════════════════════════════════════════════
@@ -101,9 +99,8 @@ TK_SZ = 6      # tick label
 A_SZ = 5       # annotation inside cell
 
 # ── (a) PlantVillageTomato ──────────────────────────────────
-sns.heatmap(pv_norm, annot=True, fmt='.0f', cmap='Blues',
+sns.heatmap(pv_cm, annot=True, fmt='d', cmap='Blues',
             xticklabels=pv_labels, yticklabels=pv_labels, ax=ax1,
-            vmin=0, vmax=100,
             linewidths=0.4, linecolor='white',
             cbar=False, annot_kws={'size': A_SZ, 'fontweight': 'normal'})
 ax1.set_xlabel("Predicted", fontsize=L_SZ, labelpad=3)
@@ -113,9 +110,8 @@ ax1.set_xticklabels(pv_labels, rotation=45, ha='right', fontsize=TK_SZ)
 ax1.set_yticklabels(pv_labels, rotation=0, fontsize=TK_SZ)
 
 # ── (b) DeepWeeds ───────────────────────────────────────────
-sns.heatmap(dw_norm, annot=True, fmt='.0f', cmap='Blues',
+sns.heatmap(dw_cm, annot=True, fmt='d', cmap='Blues',
             xticklabels=dw_labels, yticklabels=dw_labels, ax=ax2,
-            vmin=0, vmax=100,
             linewidths=0.4, linecolor='white',
             cbar=False, annot_kws={'size': A_SZ, 'fontweight': 'normal'})
 ax2.set_xlabel("Predicted", fontsize=L_SZ, labelpad=3)
