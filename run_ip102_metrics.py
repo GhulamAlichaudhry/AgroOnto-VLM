@@ -36,7 +36,7 @@ LAMBDA_ONTO    = 0.125
 LAMBDA_UNIFORM = config.LAMBDA_UNIFORM   # 0.10
 LAMBDA_CE      = 1.0 - LAMBDA_UNIFORM - LAMBDA_ONTO   # 0.775
 LAMBDA_PROTO   = config.LAMBDA_PROTO     # 0.0
-EPOCHS         = config.EPOCHS           # 30
+EPOCHS         = 30
 DEVICE         = "cuda" if torch.cuda.is_available() else "cpu"
 
 CHECKPOINT_DIR = os.path.join(config.BASE_DIR, "results", "checkpoints")
