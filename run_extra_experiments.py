@@ -212,13 +212,20 @@ def get_data(dataset_name, preprocess, smoke=False):
 
     num_classes = len(class_names)
 
-    # Smoke: cap everything to tiny sizes
+    # Smoke: cap to 5 classes × 4 items so 85/15 split and val are non-empty
     if smoke:
         by_cls = {}
         for item in all_train:
             by_cls.setdefault(item[1], []).append(item)
-        all_train = [items[0] for items in by_cls.values()][:num_classes]
-        test_items = all_train[:max(2, num_classes // 5)]
+        smoke_classes = list(by_cls.keys())[:5]
+        all_train = []
+        for cls in smoke_classes:
+            all_train.extend(by_cls[cls][:4])
+        # Keep only smoke_classes in test too
+        smoke_set = set(smoke_classes)
+        test_items = [it for it in test_items if it[1] in smoke_set][:5]
+        if not test_items:
+            test_items = all_train[:5]
 
     # 85/15 split of original train
     train_full, val_items = stratified_split(all_train, VAL_FRAC, SPLIT_SEED)
@@ -234,8 +241,10 @@ def make_loaders(train_items, val_items, test_items, preprocess,
     val_ds   = ListDataset(val_items,   preprocess)
     test_ds  = ListDataset(test_items,  preprocess)
     kw = dict(num_workers=num_workers, pin_memory=True)
+    # drop_last only when train is big enough for at least one full batch
+    drop = len(train_items) >= batch_size
     train_loader = DataLoader(train_ds, batch_size=batch_size,
-                              shuffle=True, drop_last=True, **kw)
+                              shuffle=True, drop_last=drop, **kw)
     val_loader   = DataLoader(val_ds,   batch_size=batch_size,
                               shuffle=False, **kw)
     test_loader  = DataLoader(test_ds,  batch_size=batch_size,
@@ -257,7 +266,7 @@ def evaluate_acc(model, loader):
             preds = logits.argmax(dim=-1)
             correct += (preds == labels).sum().item()
             total   += labels.size(0)
-    return 100.0 * correct / total
+    return 0.0 if total == 0 else 100.0 * correct / total
 
 
 def evaluate_full(model, loader):
@@ -272,9 +281,11 @@ def evaluate_full(model, loader):
             preds = logits.argmax(dim=-1)
             all_preds.extend(preds.cpu().tolist())
             all_labels.extend(labels.cpu().tolist())
-    acc    = 100.0 * sum(p == l for p, l in zip(all_preds, all_labels)) / len(all_labels)
-    f1     = 100.0 * f1_score(all_labels, all_preds,
-                               average="macro", zero_division=0)
+    if not all_labels:
+        return 0.0, 0.0
+    acc = 100.0 * sum(p == l for p, l in zip(all_preds, all_labels)) / len(all_labels)
+    f1  = 100.0 * f1_score(all_labels, all_preds,
+                            average="macro", zero_division=0)
     return acc, f1
 
 
